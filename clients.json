@@ -1,0 +1,67 @@
+[
+    {
+        "client_id": 1,
+        "first_name": "John",
+        "last_name": "Doe",
+        "address": "123 Main St, Springfield",
+        "status": "completed",
+        "photo_id": "1",
+        "client_details": {
+            "email": "john.doe@example.com",
+            "phone": "555-1234",
+            "age": 30
+        }
+    },
+    {
+        "client_id": 2,
+        "first_name": "Jane",
+        "last_name": "Smith",
+        "address": "456 Oak Ave, Metropolis",
+        "status": "refused",
+        "photo_id": "2",
+        "client_details": {
+            "email": "jane.smith@example.com",
+            "phone": "555-5678",
+            "age": 25
+        }
+    },
+    {
+        "client_id": 3,
+        "first_name": "Emily",
+        "last_name": "Johnson",
+        "address": "789 Pine Rd, Gotham",
+        "status": "partial",
+        "photo_id": "3",
+        "client_details": {
+            "email": "emily.johnson@example.com",
+            "phone": "555-8765",
+            "age": 28
+        }
+    },
+    {
+        "client_id": 4,
+        "first_name": "Michael",
+        "last_name": "Brown",
+        "address": "321 Elm St, Star City",
+        "status": "completed",
+        "photo_id": "4",
+        "client_details": {
+            "email": "michael.brown@example.com",
+            "phone": "555-2345",
+            "age": 35
+        }
+    },
+    {
+        "client_id": 5,
+        "first_name": "Sarah",
+        "last_name": "Davis",
+        "address": "654 Maple St, Central City",
+        "status": "refused",
+        "photo_id": "5",
+        "client_details": {
+            "email": "sarah.davis@example.com",
+            "phone": "555-6789",
+            "age": 40
+        }
+    }
+]
