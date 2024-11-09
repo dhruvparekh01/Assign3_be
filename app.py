@@ -54,6 +54,11 @@ def attach_photo(client):
     asset_path = './assets'
     client['photo'] = encode_image_to_base64(asset_path + '/' + client['photo_id'] + '.jpg')
 
+def attach_photos(clients):
+    asset_path = './assets'
+    for client in clients:
+        client['photo'] = encode_image_to_base64(asset_path + '/' + client['photo_id'] + '.jpg')    
+
 def get_client_from_clients(client_id, clients):
     for client in clients:
         if str(client['client_id']) == str(client_id):
@@ -118,6 +123,13 @@ def token_required(f):
 @token_required
 def get_clients(current_user):
     attach_thumbnails(clients)
+    return jsonify(clients), 200
+
+# GET /clientsDetail
+@app.route('/clientsDetail', methods=['GET'])
+@token_required
+def get_clientsDetail(current_user):
+    attach_photos(clients)
     return jsonify(clients), 200
 
 # GET /clients/<client_id>
