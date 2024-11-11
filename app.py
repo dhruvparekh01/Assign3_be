@@ -121,7 +121,7 @@ def token_required(f):
 # GET /clients
 @app.route('/clients', methods=['GET'])
 @token_required
-def get_clients(current_user):
+def get_clients():
     attach_thumbnails(clients)
     return jsonify(clients), 200
 
