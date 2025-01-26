@@ -5,10 +5,27 @@ import os
 import jwt
 import datetime
 
+import psycopg2
+from psycopg2.extras import RealDictCursor
+
 app = Flask(__name__)
 
 # Secret key for encoding/decoding JWT
 app.config['SECRET_KEY'] = 'your_secret_key'
+
+DB_NAME = "final_project"
+DB_USER = "admin"
+DB_PASSWORD = "root"
+DB_HOST = "localhost"
+DB_PORT = "5432"
+
+conn = psycopg2.connect(
+    dbname=DB_NAME,
+    user=DB_USER,
+    password=DB_PASSWORD,
+    host=DB_HOST,
+    port=DB_PORT
+)
 
 # File paths for data storage
 USERS_FILE = 'users.json'
@@ -21,13 +38,28 @@ def load_data(filename):
             return json.load(f)
     return {}
 
+def load_data_from_db(table_name):
+    with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+        cursor.execute(f"SELECT * FROM my_schema.{table_name}")
+        return cursor.fetchall()
+
+def get_user_from_db(username):
+    with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+        cursor.execute(f"SELECT * FROM my_schema.user WHERE username = '{username}'")
+        return cursor.fetchone()
+    
+def insert_user_to_db(name, username, password):
+    with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+        cursor.execute(f"INSERT INTO my_schema.user (name, username, password) VALUES ('{name}', '{username}', '{password}')")
+        conn.commit()
+
 # Save data to JSON files
 def save_data(filename, data):
     with open(filename, 'w') as f:
         json.dump(data, f, indent=4)
 
 # Load initial data
-users = load_data(USERS_FILE)
+users = load_data_from_db('user')
 clients = load_data(CLIENTS_FILE)
 
 # Function to generate JWT token
@@ -47,22 +79,40 @@ def encode_image_to_base64(image_path):
 def attach_thumbnails(clients):
     asset_path = './assets'
     for client in clients:
-        client['thumbnail'] = encode_image_to_base64(asset_path + '/' + client['photo_id'] + '-thumb.jpg')
-
-def attach_photo(client):
-    print(client)
-    asset_path = './assets'
-    client['photo'] = encode_image_to_base64(asset_path + '/' + client['photo_id'] + '.jpg')
-
-def attach_photos(clients):
-    asset_path = './assets'
-    for client in clients:
-        client['photo'] = encode_image_to_base64(asset_path + '/' + client['photo_id'] + '.jpg')    
+        client['thumbnail'] = encode_image_to_base64(asset_path + '/' + client['photo_id'] + '-thumb.jpg')    
 
 def get_client_from_clients(client_id, clients):
     for client in clients:
         if str(client['client_id']) == str(client_id):
             return client
+
+def get_clients_from_db():
+    with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+        cursor.execute("SELECT * FROM my_schema.client")
+        return cursor.fetchall()
+
+def get_client_from_db(client_id):
+    with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+        cursor.execute(f"SELECT * FROM my_schema.client WHERE client_id = '{client_id}'")
+        return cursor.fetchone()
+
+def get_client_from_db_by_email(email):
+    with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+        cursor.execute(f"SELECT * FROM my_schema.client WHERE email = '{email}'")
+        return cursor.fetchone()
+
+def update_client_in_db(client_id, updated_status):
+    with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+        cursor.execute(f"UPDATE my_schema.client SET status = '{updated_status}' WHERE client_id = '{client_id}'")
+        conn.commit()
+
+def insert_client_to_db(client):
+    with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+        print(client['photo'])
+        print(type(client['photo']))
+        sql_command = f"INSERT INTO my_schema.client (first_name, last_name, address, status, email, phone, age, photo, thumbnail) VALUES ('{client['first_name']}','{client['last_name']}','{client['address']}','{client['status']}','{client['email']}','{client['phone']}','{client['age']}','{client['photo']}','{client['thumbnail']}')"
+        cursor.execute(sql_command)
+        conn.commit()
         
 def update_client_from_clients(client_id, clients, updated_status):
     for client in clients:
@@ -77,7 +127,7 @@ def login():
     username = data.get('username')
     password = data.get('password')
 
-    user = users.get(username)
+    user = get_user_from_db(username)
     if user and user['password'] == password:
         token = generate_token(username)
         return jsonify({"message": "Login successful", "token": token}), 200
@@ -91,16 +141,12 @@ def signup():
     username = data.get('username')
     password = data.get('password')
 
-    if username in users:
+    existing_user = get_user_from_db(username)
+
+    if existing_user is not None:
         return jsonify({"message": "User already exists"}), 409
     
-    users[username] = {
-        "name": name,
-        "username": username,
-        "password": password
-    }
-    save_data(USERS_FILE, users)
-    
+    insert_user_to_db(name, username, password)
     return jsonify({"message": "Signup successful", "username": username}), 201
 
 # Token required decorator
@@ -122,38 +168,46 @@ def token_required(f):
 @app.route('/clients', methods=['GET'])
 @token_required
 def get_clients(current_user):
-    #attach_thumbnails(clients)
-    return jsonify(clients), 200
-
-# GET /clientsDetail
-@app.route('/clientsDetail', methods=['GET'])
-@token_required
-def get_clientsDetail(current_user):
-    attach_photos(clients)
+    clients = get_clients_from_db()
     return jsonify(clients), 200
 
 # GET /clients/<client_id>
 @app.route('/clients/<client_id>', methods=['GET'])
 @token_required
 def get_client(current_user, client_id):
-    client = get_client_from_clients(client_id, clients)
-    attach_photo(client)
+    client = get_client_from_db(client_id)
     if client:
         return jsonify(client), 200
 
     return jsonify({"message": "Client not found"}), 404
 
-# PUT /clients/<client_id>
+# PATCH /clients/<client_id>
 @app.route('/clients/<client_id>', methods=['PATCH'])
 @token_required
 def update_client(current_user, client_id):
     new_status = request.json['status']
-    client = update_client_from_clients(client_id, clients, new_status)
-    attach_photo(client)
+    client = update_client_in_db(client_id, new_status)
+    if client:
+        return jsonify(client), 200
+
+    return jsonify({"message": "Client not found"}), 404
+
+# POST /clients/<client_id>
+@app.route('/clients', methods=['POST'])
+@token_required
+def post_client(current_user):
+    client = request.json
+
+    try:
+        insert_client_to_db(client)
+        client = get_client_from_db_by_email(client['email'])
+    except psycopg2.errors.UniqueViolation as e:
+        return jsonify({"message": "Client already exists"}), 409
+
     if client:
         return jsonify(client), 200
 
     return jsonify({"message": "Client not found"}), 404
 
 if __name__ == '__main__':
-    app.run(debug=True)        
+    app.run(debug=True)
