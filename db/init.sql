@@ -24,3 +24,16 @@ CREATE TABLE my_schema.Client(
 	thumbnail TEXT,
 	photo TEXT
 );
+
+CREATE TABLE my_schema.Task (
+    id SERIAL PRIMARY KEY,
+	client_id INTEGER NOT NULL,
+    reminder_name TEXT NOT NULL,
+    task_type TEXT NOT NULL,
+    date_time TIMESTAMP NOT NULL,
+    repeat_days TEXT, -- Stores comma-separated values like 'Sun,Mon,Wed'
+    notes TEXT,
+    file_path TEXT,
+	FOREIGN KEY (client_id) REFERENCES my_schema.client(client_id) ON DELETE CASCADE
+);
+
