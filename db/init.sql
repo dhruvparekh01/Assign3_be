@@ -1,3 +1,8 @@
+CREATE DATABASE final_project;
+\c final_project;
+
+GRANT CONNECT ON DATABASE final_project TO admin;
+
 CREATE SCHEMA my_schema;
 
 CREATE TABLE my_schema.User(
