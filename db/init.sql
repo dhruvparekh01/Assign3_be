@@ -34,7 +34,6 @@ CREATE TABLE my_schema.Task (
     repeat_days TEXT, -- Stores comma-separated values like 'Sun,Mon,Wed'
     notes TEXT,
     file_path TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 	FOREIGN KEY (client_id) REFERENCES my_schema.client(client_id) ON DELETE CASCADE
 );
 
