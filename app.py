@@ -4,7 +4,6 @@ import json
 import os
 import jwt
 import datetime
-import pytz
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
