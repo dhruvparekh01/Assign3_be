@@ -4,6 +4,7 @@ import json
 import os
 import jwt
 import datetime
+import pytz
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -14,8 +15,8 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key'
 
 DB_NAME = "final_project"
-DB_USER = "admin"
-DB_PASSWORD = "root"
+DB_USER = "postgres"
+DB_PASSWORD = "admin"
 DB_HOST = "localhost"
 DB_PORT = "5432"
 
@@ -113,7 +114,32 @@ def insert_client_to_db(client):
         sql_command = f"INSERT INTO my_schema.client (first_name, last_name, address, status, email, phone, age, photo, thumbnail) VALUES ('{client['first_name']}','{client['last_name']}','{client['address']}','{client['status']}','{client['email']}','{client['phone']}','{client['age']}','{client['photo']}','{client['thumbnail']}')"
         cursor.execute(sql_command)
         conn.commit()
-        
+
+def get_pending_tasks_for_client(client_id):
+    with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+        cursor.execute("""
+            SELECT * FROM my_schema.Task 
+            WHERE client_id = %s AND date_time > NOW()
+            ORDER BY date_time ASC
+        """, (client_id,))
+        return cursor.fetchall()
+    
+def delete_task(task_id):
+    with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+        cursor.execute("""
+            DELETE FROM my_schema.Task WHERE id = %s
+        """, (task_id,))
+        conn.commit()
+
+
+def insert_task(client_id, reminder_name, task_type, date_time, repeat_days=None, notes=None, file_path=None):
+    with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+        cursor.execute("""
+            INSERT INTO my_schema.Task (client_id, reminder_name, task_type, date_time, repeat_days, notes, file_path) 
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """, (client_id, reminder_name, task_type, date_time, repeat_days, notes, file_path))
+        conn.commit()
+
 def update_client_from_clients(client_id, clients, updated_status):
     for client in clients:
         if str(client["client_id"]) == str(client_id):
@@ -208,6 +234,42 @@ def post_client(current_user):
         return jsonify(client), 200
 
     return jsonify({"message": "Client not found"}), 404
+
+@app.route('/tasks/pending/<client_id>', methods=['GET'])
+@token_required
+def get_pending_tasks(current_user, client_id):
+    tasks = get_pending_tasks_for_client(client_id)
+    if tasks:
+        return jsonify(tasks), 200
+    return jsonify({"message": "No pending tasks found for this client"}), 404
+
+@app.route('/tasks/<task_id>', methods=['DELETE'])
+@token_required
+def delete_task_route(current_user, task_id):
+    try:
+        delete_task(task_id)
+        return jsonify({"message": "Task deleted successfully"}), 200
+    except Exception as e:
+        return jsonify({"message": f"Error deleting task: {str(e)}"}), 400
+
+@app.route('/tasks', methods=['POST'])
+@token_required
+def add_task(current_user):
+    data = request.json
+    client_id = data.get('client_id')
+    reminder_name = data.get('reminder_name')
+    task_type = data.get('task_type')
+    date_time = data.get('date_time')
+    repeat_days = data.get('repeat_days', None)
+    notes = data.get('notes', None)
+    file_path = data.get('file_path', None)
+
+    try:
+        insert_task(client_id, reminder_name, task_type, date_time, repeat_days, notes, file_path)
+        return jsonify({"message": "Task added successfully"}), 201
+    except Exception as e:
+        return jsonify({"message": f"Error adding task: {str(e)}"}), 400
+
 
 if __name__ == '__main__':
     app.run(debug=True)
