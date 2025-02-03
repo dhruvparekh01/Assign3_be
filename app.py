@@ -14,8 +14,8 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key'
 
 DB_NAME = "final_project"
-DB_USER = "postgres"
-DB_PASSWORD = "admin"
+DB_USER = "admin"
+DB_PASSWORD = "root"
 DB_HOST = "localhost"
 DB_PORT = "5432"
 
