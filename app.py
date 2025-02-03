@@ -14,8 +14,8 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key'
 
 DB_NAME = "final_project"
-DB_USER = "admin"
-DB_PASSWORD = "root"
+DB_USER = "postgres"
+DB_PASSWORD = "admin"
 DB_HOST = "localhost"
 DB_PORT = "5432"
 
@@ -139,6 +139,13 @@ def insert_task(client_id, reminder_name, task_type, date_time, repeat_days=None
         """, (client_id, reminder_name, task_type, date_time, repeat_days, notes, file_path))
         conn.commit()
 
+def get_task_from_db(task_id):
+    with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+        cursor.execute("""
+            SELECT * FROM my_schema.Task WHERE id = %s
+        """, (task_id,))
+        return cursor.fetchone()
+
 def update_client_from_clients(client_id, clients, updated_status):
     for client in clients:
         if str(client["client_id"]) == str(client_id):
@@ -250,6 +257,14 @@ def delete_task_route(current_user, task_id):
         return jsonify({"message": "Task deleted successfully"}), 200
     except Exception as e:
         return jsonify({"message": f"Error deleting task: {str(e)}"}), 400
+    
+@app.route('/tasks/<task_id>', methods=['GET'])
+@token_required
+def get_task(current_user, task_id):
+    task = get_task_from_db(task_id)
+    if task:
+        return jsonify(task), 200
+    return jsonify({"message": "Task not found"}), 404
 
 @app.route('/tasks', methods=['POST'])
 @token_required
