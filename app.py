@@ -14,8 +14,8 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key'
 
 DB_NAME = "final_project"
-DB_USER = "admin"
-DB_PASSWORD = "root"
+DB_USER = "postgres"
+DB_PASSWORD = "admin"
 DB_HOST = "localhost"
 DB_PORT = "5432"
 
@@ -117,9 +117,10 @@ def insert_client_to_db(client):
 def get_pending_tasks_for_client(client_id):
     with conn.cursor(cursor_factory=RealDictCursor) as cursor:
         cursor.execute("""
-            SELECT * FROM my_schema.Task 
-            WHERE client_id = %s AND date_time > NOW()
-            ORDER BY date_time ASC
+        SELECT * FROM my_schema.Task 
+        WHERE (client_id = %s AND date_time > NOW()) 
+        OR (repeat_days IS NOT NULL AND repeat_days != '')
+        ORDER BY date_time ASC;
         """, (client_id,))
         return cursor.fetchall()
     
@@ -282,6 +283,7 @@ def add_task(current_user):
         insert_task(client_id, reminder_name, task_type, date_time, repeat_days, notes, file_path)
         return jsonify({"message": "Task added successfully"}), 201
     except Exception as e:
+        print(e)
         return jsonify({"message": f"Error adding task: {str(e)}"}), 400
 
 
